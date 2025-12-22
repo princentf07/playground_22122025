@@ -1,11 +1,11 @@
 import streamlit as st
-# import pandas as pd
-# import plotly as px
+import pandas as pd
+import plotly as px
 
 
 st.set_page_config(
     page_title="Ex-stream-ly Cool App",
-    page_icon="🧊",
+    page_icon="🦈",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
