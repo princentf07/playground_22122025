@@ -3,8 +3,6 @@ import pandas as pd
 import plotly as px
 from datetime import datetime
 
-
-
 st.set_page_config(
     page_title="HOTAWW App",
     page_icon="🫦",
