@@ -93,7 +93,6 @@ if page == "Dashboard":
         fig2 = px.bar(category, x="Category", y="Amount", title="Expenses by Category", labels={'Amount':'Total Expense'})
         st.plotly_chart(fig2, use_container_width=True)
 
-
 # Upload Page
 elif page == "Upload Data":
     st.title("📁 Upload Your Financial Transactions")
