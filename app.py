@@ -1,144 +1,99 @@
-# =============================================
-# FUTURISTIC IC50 / LC50 / EC50 ANALYSIS WEB APP
-# Streamlit-based Scientific Software
-# =============================================
+# app.py
+# Web App Streamlit: Sistem Pengolah Data IC50, LC50, EC50, dan Total Phenolic Content (TPC)
+# Input DATA MANUAL (tanpa upload file)
 
 import streamlit as st
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-import hashlib
 
-# -------------------------------
-# PAGE CONFIG
-# -------------------------------
-st.set_page_config(
-    page_title="BioAssay Analyzer",
-    page_icon="🧬",
-    layout="wide"
+
+
+st.set_page_config(page_title="Pengolah Data Bioaktivitas", layout="wide")
+
+st.title("🧪 Sistem Pengolah Data IC₅₀, LC₅₀, EC₅₀ & Total Phenolic Content (Input Manual)")
+
+menu = st.sidebar.selectbox(
+    "Pilih Jenis Analisis",
+    ["IC50 / LC50 / EC50", "Total Phenolic Content (TPC)"]
 )
 
-# -------------------------------
-# SIMPLE AUTH SYSTEM
-# -------------------------------
-USERS = {
-    "admin": hashlib.sha256("admin123".encode()).hexdigest(),
-    "researcher": hashlib.sha256("lab456".encode()).hexdigest()
-}
+# ==========================
+# FUNGSI
+# ==========================
 
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+def hitung_x50(x, y):
+    x = np.array(x, dtype=float)
+    y = np.array(y, dtype=float)
 
+    # regresi linier manual (metode kuadrat terkecil)
+    n = len(x)
+    sum_x = np.sum(x)
+    sum_y = np.sum(y)
+    sum_xy = np.sum(x * y)
+    sum_x2 = np.sum(x ** 2)
 
-def login():
-    st.markdown("## 🔐 Login Sistem")
-    user = st.text_input("Username")
-    pwd = st.text_input("Password", type="password")
+    a = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2)
+    b = (sum_y - a * sum_x) / n
 
-    if st.button("Login"):
-        if user in USERS and hashlib.sha256(pwd.encode()).hexdigest() == USERS[user]:
-            st.session_state.authenticated = True
-            st.success("Login berhasil")
-        else:
-            st.error("Username atau password salah")
+    x50 = (50 - b) / a
+    return x50, a, b
 
+# ==========================
+# IC50 / LC50 / EC50
+# ==========================
+if menu == "IC50 / LC50 / EC50":
+    st.header("📊 Perhitungan IC₅₀ / LC₅₀ / EC₅₀ (Input Manual)")
 
-if not st.session_state.authenticated:
-    login()
-    st.stop()
+    st.markdown("Masukkan **konsentrasi** dan **% efek** (inhibisi / mortalitas / respon)")
 
-# -------------------------------
-# HEADER UI
-# -------------------------------
-st.markdown(
-    """
-    <h1 style='text-align:center;color:#00FFD1;'>🧬 BioAssay Futuristic Analyzer</h1>
-    <p style='text-align:center;color:gray;'>IC50 • LC50 • EC50 Data Processing Software</p>
-    """,
-    unsafe_allow_html=True
-)
+    n = st.number_input("Jumlah titik data", min_value=3, value=5)
 
-# -------------------------------
-# SIDEBAR
-# -------------------------------
-with st.sidebar:
-    st.markdown("### ⚙️ Pengaturan Analisis")
-    assay_type = st.selectbox("Jenis Analisis", ["IC50", "LC50", "EC50"])
-    response_type = st.selectbox("Tipe Respon", ["% Inhibisi", "% Mortalitas", "% Efek"])
-    st.markdown("---")
-    st.markdown("📈 Model: Regresi Linier")
+    konsentrasi = []
+    efek = []
 
-# -------------------------------
-# DATA INPUT
-# -------------------------------
-st.markdown("## 📥 Input Data")
+    for i in range(int(n)):
+        col1, col2 = st.columns(2)
+        with col1:
+            konsentrasi.append(st.number_input(f"Konsentrasi ke-{i+1}", key=f"x{i}"))
+        with col2:
+            efek.append(st.number_input(f"% Efek ke-{i+1}", key=f"y{i}"))
 
-uploaded = st.file_uploader("Upload data (CSV)", type=["csv"])
+    if st.button("Hitung X50"):
+        x50, a, b = hitung_x50(konsentrasi, efek)
+        st.subheader("Hasil")
+        st.write(f"Persamaan regresi: y = {a:.4f}x + {b:.4f}")
+        st.success(f"Nilai IC₅₀ / LC₅₀ / EC₅₀ = {x50:.4f}")
 
-if uploaded:
-    df = pd.read_csv(uploaded)
-else:
-    df = pd.DataFrame({
-        "Konsentrasi": [1, 5, 10, 25, 50, 100],
-        "Respon": [5, 12, 28, 55, 72, 90]
-    })
+# ==========================
+# TOTAL PHENOLIC CONTENT
+# ==========================
+if menu == "Total Phenolic Content (TPC)":
+    st.header("🧫 Perhitungan Total Phenolic Content (TPC) – Input Manual")
 
-st.dataframe(df, use_container_width=True)
+    st.markdown("Masukkan data **kurva standar asam galat**")
 
-# -------------------------------
-# REGRESSION & CALCULATION
-# -------------------------------
-X = df[["Konsentrasi"]].values
-Y = df["Respon"].values
+    n_std = st.number_input("Jumlah titik standar", min_value=3, value=5)
 
-model = LinearRegression()
-model.fit(X, Y)
+    kons_std = []
+    abs_std = []
 
-slope = model.coef_[0]
-intercept = model.intercept_
-r2 = model.score(X, Y)
+    for i in range(int(n_std)):
+        col1, col2 = st.columns(2)
+        with col1:
+            kons_std.append(st.number_input(f"Konsentrasi standar ke-{i+1}", key=f"xs{i}"))
+        with col2:
+            abs_std.append(st.number_input(f"Absorbansi ke-{i+1}", key=f"ys{i}"))
 
-# IC50 / LC50 / EC50 calculation
-TARGET = 50
-value_50 = (TARGET - intercept) / slope
+    slope, intercept, r, p, se = linregress(kons_std, abs_std)
 
-# -------------------------------
-# RESULTS
-# -------------------------------
-st.markdown("## 📊 Hasil Analisis")
+    st.subheader("Persamaan Kurva Standar")
+    st.write(f"y = {slope:.4f}x + {intercept:.4f}")
+    st.write(f"R² = {r**2:.4f}")
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Slope", f"{slope:.4f}")
-col2.metric("Intercept", f"{intercept:.4f}")
-col3.metric("R²", f"{r2:.4f}")
+    st.subheader("Data Sampel")
+    abs_sample = st.number_input("Absorbansi Sampel")
+    dilution = st.number_input("Faktor Pengenceran", value=1.0)
 
-st.success(f"🎯 Nilai {assay_type} = {value_50:.3f}")
-
-# -------------------------------
-# PLOT
-# -------------------------------
-st.markdown("## 📈 Kurva Regresi")
-
-x_line = np.linspace(X.min(), X.max(), 100).reshape(-1, 1)
-y_line = model.predict(x_line)
-
-fig, ax = plt.subplots()
-ax.scatter(X, Y)
-ax.plot(x_line, y_line)
-ax.axhline(50)
-ax.axvline(value_50)
-ax.set_xlabel("Konsentrasi")
-ax.set_ylabel(response_type)
-ax.set_title(f"Kurva Regresi {assay_type}")
-
-st.pyplot(fig)
-
-# -------------------------------
-# FOOTER
-# -------------------------------
-st.markdown("---")
-st.markdown(
-    "<p style='text-align:center;color:gray;'>Developed for Scientific & Pharmaceutical Data Analysis</p>",
-    unsafe_allow_html=True
-)
+    if st.button("Hitung TPC"):
+        konsen = (abs_sample - intercept) / slope
+        tpc = konsen * dilution
+        st.success(f"Total Phenolic Content = {tpc:.4f} mg GAE/g")
